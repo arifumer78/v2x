@@ -110,7 +110,7 @@ TC ITS doesn't work in isolation — it's the harmonisation hub between:
 
 ---
 
-## 6. Where You Can Add Value (and Make Money)
+## 6. Where You Can Add Value
 
 This ecosystem is standards-rich but tooling-poor in places — that gap is the opportunity.
 
