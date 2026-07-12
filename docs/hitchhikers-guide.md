@@ -248,12 +248,12 @@ Field Deployment
 
 | Protocol | Functional Specification | ATS |
 |-----------|--------------------------|-----|
-| CAM | EN 302 637-2 / TS 103 900 | TS 102 868 |
-| DENM | EN 302 637-3 / TS 103 831 | TS 102 869 |
-| BTP | EN 302 636-5-1 | TS 102 870 |
-| GeoNetworking | EN 302 636-4-1 | TS 102 871 |
-| ITS Security | TS 103 097 | TS 103 096 |
-| ITS Station Facilities | Various | TS 103 191 |
+| CAM | EN 302 637-2 / TS 103 900 | TS 102 868-1,2,3 |
+| DENM | EN 302 637-3 / TS 103 831 | TS 102 869-1,2,3 |
+| BTP | EN 302 636-5-1 | TS 102 870-1,2,3 |
+| GeoNetworking | EN 302 636-4-1 | TS 102 871-1,2,3 |
+| ITS Security | TS 103 097 | TS 103 096-1,2,3 |
+| ITS Station Facilities | Various | TS 103 191-1,2,3 |
 
 ### Tool Ecosystem by Responsibility
 
