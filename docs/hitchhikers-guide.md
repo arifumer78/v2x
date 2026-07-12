@@ -176,3 +176,118 @@ Practical notes:
 ---
 
 *Mostly harmless. Standards move roughly annually — always confirm current release status against `etsi.org/deliver` before shipping.*
+
+
+---
+
+## 8. Verification, Validation & Conformance
+
+Building a V2X stack is only half the journey. Demonstrating that it is **correct** is equally important.
+
+### Engineering Validation Flow
+
+```text
+ETSI Standard
+      │
+      ▼
+ASN.1 Specification
+      │
+      ▼
+ASN.1 Compiler
+      │
+      ▼
+Generated C++ Code
+      │
+      ▼
+ASN Runtime
+      │
+      ▼
+Unit & Fuzz Testing
+      │
+      ▼
+Protocol Validation
+      │
+      ▼
+TTCN-3 Abstract Test Suites
+      │
+      ▼
+Multi-vendor Interoperability
+      │
+      ▼
+Field Deployment
+```
+
+### Verification
+
+**Did we build the software correctly?**
+
+- Unit testing
+- Boundary testing
+- Encode → Decode → Compare
+- Fuzz testing (AFL++, libFuzzer)
+- Static analysis and sanitizers
+
+### Validation
+
+**Does the implementation behave according to the ETSI specifications?**
+
+- Decode published ETSI examples
+- Compare with commercial codecs
+- Replay captured CAM/DENM traffic
+- Performance and stress testing
+
+### Conformance
+
+**Does the implementation conform to the standard?**
+
+- Execute ETSI TTCN-3 Abstract Test Suites (ATS)
+- Generate conformance reports
+- Participate in ETSI Plugtests™
+
+### ETSI Abstract Test Suites
+
+| Protocol | Functional Specification | ATS |
+|-----------|--------------------------|-----|
+| CAM | EN 302 637-2 / TS 103 900 | TS 102 868 |
+| DENM | EN 302 637-3 / TS 103 831 | TS 102 869 |
+| BTP | EN 302 636-5-1 | TS 102 870 |
+| GeoNetworking | EN 302 636-4-1 | TS 102 871 |
+| ITS Security | TS 103 097 | TS 103 096 |
+| ITS Station Facilities | Various | TS 103 191 |
+
+### Tool Ecosystem by Responsibility
+
+| Responsibility | Open Source | Commercial | Project |
+|----------------|-------------|------------|---------|
+| ASN.1 Compiler | asn1c | OSS Nokalva, Objective Systems | asncpp |
+| ASN.1 Runtime | asn1c runtime | Objective Systems | asn-runtime |
+| Unit Testing | GoogleTest | — | Planned |
+| Fuzz Testing | AFL++, libFuzzer | — | Planned |
+| TTCN-3 | Eclipse Titan | TTworkbench | Future |
+| Packet Analysis | Wireshark | Spirent | Future |
+| Simulation | SUMO, CARLA, Artery | Spirent | Future |
+| Interoperability | Community tools | ETSI Plugtests, Keysight, DEKRA | Future |
+
+### Long-term Roadmap
+
+```text
+Standards
+    │
+    ▼
+asncpp
+    │
+    ▼
+asn-runtime
+    │
+    ▼
+Generated ETSI Messages
+    │
+    ▼
+Virtual OBU / RSU
+    │
+    ▼
+TTCN-3 ATS
+    │
+    ▼
+Interoperability
+```
