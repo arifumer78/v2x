@@ -2,37 +2,87 @@
 
 Honest snapshot of what's actually built vs. planned. Update this at the end of any work session — even a one-line touch is worth it.
 
-**Last touched: 2026-07-04**
+**Last touched: 2026-07-19 (full clause 12–23 cross-check + constraint-level extensibility)**
 
 ## Docs
 - [x] Hitchhiker's Guide to ETSI C-V2X (`docs/hitchhikers-guide.md`)
 - [x] PER Runtime design draft v0.1 (`docs/design/per-runtime-design.md`)
+- [x] PC5 vs Uu interface comparison (`docs/architecture/pc5-vs-uu.md`)
+- [x] Facilities-layer message reference + CAM/DENM flow diagrams (`docs/messages/`)
 - [ ] Compiler design doc (not started — Phase 2)
 - [ ] Open risks in design doc §9 verified against actual ETSI `.asn` modules (recursion, unbounded SIZE, SET/SET OF prevalence)
 
 ## Phase 1 — PER Runtime (`runtime/`)
-- [ ] `BitCursor` (bit-position tracking, bounds-checked read/write)
-- [ ] `Error` type / error taxonomy for `std::expected`
-- [ ] `PerWriter`/`PerReader` — the seven primitives
-  - [ ] `constrained_whole_number`
-  - [ ] `semi_constrained_whole_number`
-  - [ ] `unconstrained_whole_number`
-  - [ ] `normally_small_length`
-  - [ ] `length_determinant` (incl. 16K fragmentation)
-  - [ ] `bits`
-  - [ ] `bit`
-  - [ ] `open_type`
-- [ ] `Aligned` / `Unaligned` policy
-- [ ] `Basic` / `Canonical` policy (lower priority — see design doc §5.2 scoping note)
-- [ ] GTest unit tests (Layer 1: known-answer, boundary, fragmentation, zero-length)
+- [x] CMake scaffold — Visual Studio 17 2022 generator, GTest via FetchContent, CTest wired up
+- [x] `BitCursor` (bit-position tracking, bounds-checked read/write)
+- [x] `Error` type / error taxonomy
+- [x] `Result<T,E>` / `Status<E>` — hand-rolled, replaces the design doc's original `std::expected` (C++23 stdlib feature with no published MISRA C++:2023 guidance yet; see design doc §7 and the deviation note in `runtime/include/v2x/per/result.hpp`)
+- [x] `PerWriter`/`PerReader` — the seven primitives, all implemented and tested for UPER (Unaligned, Basic)
+  - [x] `constrained_whole_number` (incl. the >65536 length-prefixed fallback)
+  - [x] `semi_constrained_whole_number`
+  - [x] `unconstrained_whole_number`
+  - [x] `normally_small_length` — cross-checked against the actual ITU-T X.691 PDF (§11.6) and found genuinely wrong (see the dedicated section below); fixed and re-verified
+  - [x] `length_determinant` (incl. 16K fragmentation — see API note below)
+  - [x] `bits`
+  - [x] `bit`
+  - [x] `open_type` (incl. multi-fragment round-trip, tested up to 40000 bytes)
+- [x] `Aligned` / `Unaligned` policy — struct exists, template wiring compiles for all 4 policy combinations; only `Unaligned` is behaviorally complete (see wiring-status comment in `policy.hpp` — `Aligned` only pads at `finish()`, not yet at the other X.691-specified insertion points, and `PerReader` doesn't consume alignment padding at all yet)
+- [x] `Basic` / `Canonical` policy (marker types only — SET/SET-OF canonical ordering is orchestration-layer, deferred per design doc §5.2/§11)
+- [x] GTest unit tests (Layer 1: known-answer, boundary, fragmentation, zero-length) — 97 tests, all passing
+- [x] Existing Layer 1 suite verified clean under AddressSanitizer (`-DV2X_ENABLE_ASAN=ON`, RelWithDebInfo config — see `runtime/README.md`) — no heap/stack overruns, use-after-free, or other memory-safety findings across all 97 tests. **Not a fuzz harness** — this only checks the fixed test inputs already written, not random/adversarial ones.
+- [ ] UBSan — not available under plain MSVC (clang/GCC-only); would need the "C++ Clang tools for Windows" component (`clang-cl`), not currently installed
 - [ ] Property-based round-trip tests (Layer 2)
 - [ ] Double round-trip tests (Layer 3)
 - [ ] Differential tests vs. asn1c (Layer 4)
-- [ ] Fuzz harness — libFuzzer/AFL++, ASan+UBSan (Layer 5)
+- [ ] Fuzz harness — libFuzzer/AFL++, ASan+UBSan (Layer 5) — still not started; the ASan item above only covers the existing fixed test corpus, not fuzzed input
 - [ ] Branch coverage target reached on `PerReader`/`PerWriter`
+- [ ] Static analysis (clang-tidy/Cppcheck) — not run
+- [ ] Performance/benchmarking — not done
+
+**API deviation from the design doc (§4 was flagged as likely to change during implementation):** `length_determinant` returns `Result<uint32_t>`/not `Status<void>` — real X.691 fragmentation interleaves length markers with actual content, which a primitive that only knows `n` (not the content) can't do by itself. It now commits to one header per call and returns how many of the `n` units that header covers; callers with real content (`open_type`) drive the loop themselves. `PerReader::open_type` similarly takes a caller-provided destination span rather than returning a `span` into the input, since fragmented content isn't contiguous in the wire buffer. See the comments at each call site in `runtime/include/v2x/per/per_writer.hpp` / `per_reader.hpp`.
+
+## ASN.1 basic-type orchestration layer (`runtime/include/v2x/per/`, built on Phase 1)
+
+Generic, hand-usable support for the X.691-mandated ASN.1 constructs (SEQUENCE, CHOICE, SEQUENCE OF, ENUMERATED, OCTET STRING, BIT STRING) — deliberately not tied to any specific ETSI `.asn` module, and deliberately not a reflection-driven generic type system (see the plan rationale: this composes the way a future compiler's codegen actually would, as explicit calls, not a hidden abstraction). All of the following is implemented, tested (Layer-1 style: known-answer, boundary, fragmentation), and passing under both the normal Debug build and `V2X_ENABLE_ASAN` — 151 tests total, up from 97.
+
+- [x] `open_type`'s internal fragmentation loop extracted into a shared free function (`write_length_prefixed_content` / `read_length_prefixed_content`, parameterized by `unit_bits`) — refactor verified behavior-preserving against all pre-existing `OpenType.*` tests
+- [x] `octet_string.hpp` — `write_octet_string` / `read_octet_string`, optional `SizeRange`
+- [x] `bit_string.hpp` — same shared helper with `unit_bits=1`; length_determinant/fragmentation counts in **bits**, not octets (a real X.691 distinction, tested explicitly at the 16384-*bit* boundary)
+- [x] `sequence_of.hpp` — `write_sequence_of` / `read_sequence_of`, callback-per-element, same chunk protocol as `length_determinant`; tested through the 16384-element fragmentation boundary
+- [x] `open_type_wrap.hpp` — `write_open_type_wrapped` / `read_open_type_wrapped`, the scratch-buffer two-pass helper for extension-addition content (no dynamic allocation — caller-provided scratch span)
+- [x] `sequence_extension.hpp` — `write_sequence_extension` / `read_sequence_extension`; the extension bit itself stays the caller's responsibility on both sides (a real bug was caught and fixed here during implementation — see git history); handles forward-compatible decoding (unknown additions from a newer sender are skipped, not errored), capped at 64 addition slots (matches `normally_small_length`'s own small-form cap) to avoid needing dynamic allocation for a wire-controlled count
+- [x] `enumerated.hpp` — root + extension; extension values carry no content, so no `open_type` wrapping (unlike CHOICE) — verified by an explicit bit-count test
+- [x] `choice.hpp` — root index dispatch (`ChoiceSelector`) + extension alternative via `open_type_wrap` — the most complex piece; all tests passed on first implementation
+- [x] Worked example (`test_worked_example_sequence.cpp`): a hand-written, non-generated `TestSeq` (2 mandatory INTEGER, 1 optional BOOLEAN, extensible with 1 addition-group INTEGER) round-trips correctly in all presence/absence combinations — proof the design composes usably, not just correct in isolation
+
+**Known limitation, partially addressed this session:** the X.691-derivation caveat from Phase 1 — exact bit-level conventions followed from the design doc's §4.3 summary or derived by hand, not independently verified against the X.691 text — has now been partially closed for the primitives touched below. The same caveat still applies to anything not explicitly cross-checked (e.g. CHOICE/SEQUENCE extension bit-level conventions are still only as correct as the design doc's summary + the now-fixed `normally_small_length`, not independently re-verified against spec text beyond that).
+
+## Spec cross-check against the actual ITU-T X.691 PDF
+
+Downloaded the official ITU-T X.691 (02/2021) recommendation (freely available at itu.int) and used it two ways: (1) as ground truth to verify existing primitives against, catching a real bug; (2) as a source of genuine known-answer test vectors, not hand-derived ones.
+
+- [x] **Bug found and fixed: `normally_small_length` (§11.6) was wrong**, not just under-tested. The implementation had three compounding errors versus the actual spec text: small-form threshold was `[1,64]` instead of the correct `n<=63`; small-form encoded `n-1` instead of `n` directly; and the large-form path (`n>=64`) called the general `length_determinant(n)` — treating `n` as a *length value* with its own short/medium/fragmentation forms — instead of encoding `n` as a semi-constrained whole number (length-of-octet-count-prefixed minimal octets), a structurally different encoding. Concretely, for `n=64` the old code produced 9 bits; the spec-correct encoding is 17 bits. All 154 existing tests passed throughout, because they were only ever self-consistent (write/read agreeing with each other), never checked against the spec — exactly the gap this exercise closed. Fixed in `runtime/include/v2x/per/per_writer.hpp` / `per_reader.hpp`; the compensating `ext_index+1`/`-1` workaround this bug had forced into `choice.hpp` and `enumerated.hpp` was removed as no longer needed.
+- [x] Added `runtime/tests/unit/test_x691_spec_examples.cpp` — 4 known-answer tests transcribed directly from the spec, each citing its exact clause/annex:
+  - `unconstrained_whole_number(51)` against Annex A.1's PersonnelRecord `EmployeeNumber` worked example
+  - `length_determinant` short form (§11.9.3.6's own `n=4` example) and medium form (§11.9.3.7's own `n=130` example)
+  - `length_determinant` fragmentation against §11.9.3.8.1's own 144K+1 (147457) worked example — verified our chunking produces exactly the spec's `[65536, 65536, 16384, 1]` sequence with matching marker bytes; this is the single highest-risk piece of the whole kernel, so matching the spec's own example is meaningfully stronger evidence than the hand-constructed fragmentation tests alone
+- [x] 154 tests total (up from 151), all passing under both the Debug build and `V2X_ENABLE_ASAN`
+
+## Full clause 12–23 cross-check against X.691 (BOOLEAN through CHOICE)
+
+Read every construct-encoding clause the orchestration layer touches (§12 BOOLEAN, §13 INTEGER, §14 ENUMERATED, §16 BIT STRING, §17 OCTET STRING, §18 NULL, §19 SEQUENCE, §20 SEQUENCE OF, §21/§22 SET/SET OF, §23 CHOICE, plus §11.2 open type) and cross-checked each against the implementation, not just the design doc's §4.3 summary of them.
+
+**Confirmed correct**, including some emergent (not deliberately designed-for) correctness: `constrained_whole_number`'s `span==0` case — used whenever a constraint collapses to a single value (e.g. `min==max`) — automatically produces zero bits, which turns out to be *exactly* what several spec clauses mandate as special cases without our code needing to special-case them at all: zero-length BIT STRING/OCTET STRING (§16.8/§17.5 — "not encoded"), fixed-length BIT STRING/OCTET STRING/SEQUENCE OF (§16.9/§16.10/§17.6/§17.7/§20.5 — "no length determinant"), and CHOICE with a single root alternative (§23.4 — "no encoding for the index"). `open_type` (§11.2) and the minimal-octet encoding uniqueness rule (§11.3.6) also confirmed correct. SET OF under Basic-PER is confirmed to be "encoded as if declared sequence-of" (§22.2) — `sequence_of.hpp` is directly reusable for it, no new code needed.
+
+**Gaps found and addressed:**
+- [x] **Constraint-level extensibility was entirely unimplemented** (e.g. `INTEGER (0..10, ...)`, `OCTET STRING (SIZE(1..10,...))`) — genuinely different from SEQUENCE/CHOICE/ENUMERATED's *structural* extensibility (addition groups/alternatives/values), which was already implemented. Now implemented for all four constructs that need it: `integer.hpp` (`write_extensible_integer`/`read_extensible_integer`, §13.1 — in-root uses normal constrained encoding, out-of-root uses *unconstrained* per the spec text), and extended `octet_string.hpp`/`bit_string.hpp`/`sequence_of.hpp` with `write_extensible_*`/`read_extensible_*` variants (§17.3/§16.6/§20.4 — out-of-root uses the general/unconstrained length form, i.e. passing no `SizeRange`). Scoped to a finite extension-root range, the common case for a hand-written extensible constrained type; an extensible semi-constrained/unconstrained root isn't covered.
+- [x] **`ExtensionAdditionGroup` support (§19.9) — verified via a new test**, not a code change. The spec requires a group-shaped extension addition to be encoded as a nested SEQUENCE (with its own inner preamble bitmap for its own OPTIONAL members) before being open-type-wrapped as a whole. The existing generic `write_sequence_extension`/`read_sequence_extension` callback design already supports this without modification — `ExtensionAdditionGroupNestedPreamble` in `test_sequence_extension.cpp` proves it with a 2-member group (one mandatory, one optional).
+- [ ] **SEQUENCE preamble/addition-bitmap fragmentation for ≥64K fields (§19.3)** — deliberately not implemented; no real ASN.1 type has tens of thousands of optional fields or extension additions, so this is treated as an accepted non-issue rather than a gap worth closing.
+
+163 tests total (up from 154), all passing under both the Debug build and `V2X_ENABLE_ASAN`.
 
 ## Phase 2 — Compiler (`compiler/`)
-- [ ] Not started. Depends on Phase 1 being fuzz-stable first.
+- [ ] ANTLR-based `.asn` parser / IR / codegen front-end — not started. The orchestration layer above is effectively "Phase 2 minus the parser": it's what a future compiler would generate calls into, built and tested ahead of the parser itself, per explicit user direction (X.691's encoding rules are generic and testable without needing to parse any real ETSI schema first).
 
 ## Phase 3 — Tools (`tools/`)
 - [ ] Not started.
