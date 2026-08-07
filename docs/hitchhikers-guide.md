@@ -1,4 +1,4 @@
-**Last reviewed: 2026-07-04** — sections marked `<!-- verify -->` contain time-sensitive facts (event dates, release status) worth re-checking before relying on them.
+**Last reviewed: 2026-08-08** — sections marked `<!-- verify -->` contain time-sensitive facts (event dates, release status) worth re-checking before relying on them.
 
 # The Hitchhiker's Guide to ETSI C-V2X
 
@@ -144,6 +144,19 @@ This ecosystem is standards-rich but tooling-poor in places — that gap is the 
 - PKI-as-a-service / certificate lifecycle management hosted in the cloud, tied into the EU single trust domain.
 
 **Certification/consulting** — given the standards are dense and moving (Release 2 rollout, NR-V2X migration), independent advisory/certification-prep services for OEMs and Tier-1s are a straightforward value-add with low product risk.
+
+### Related ecosystem — AD stacks & cooperative perception
+
+Where this repo's message-layer work (§7) sits relative to the rest of the stack, grouped by layer. The short version: cooperative-perception pipelines still have to serialise/deserialise standardised messages at their edges — the field has moved *on top of* message encoding, not away from it, so ETSI TS 103 097 / facilities-layer fluency stays a thin, distinct skill pool from the ML side.
+
+- **AD stack integration** — full open-source autonomous-driving stacks with V2X bolted on:
+  - **Autoware** (Tier IV) and **Baidu Apollo** — the two dominant open-source full-stack AD platforms.
+  - **AutowareV2X** — a real, recent project adding a V2X communication module (including CPM handling) directly onto Autoware.
+  - **AutoC2X / OpenC2X** — older work doing the same OBU-to-stack integration pattern.
+- **Cooperative perception / sensor fusion** — ML pipelines that fuse sensor data across vehicles and infrastructure:
+  - **OpenCOOD**, **V2X-ViT**, **CoBEVT** — fusion model implementations.
+  - Datasets they train/evaluate against: **DAIR-V2X**, **V2X-Real**, **V2X-Sim**, **OPV2V**.
+- **Comms / message layer** — this repo's layer; see §7 for the ETSI Forge ASN.1 sources and existing wrappers (vanetza, its-g5-cam, ASN.1 Playground).
 
 ---
 

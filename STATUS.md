@@ -2,10 +2,10 @@
 
 Honest snapshot of what's actually built vs. planned. Update this at the end of any work session — even a one-line touch is worth it.
 
-**Last touched: 2026-07-19 (full clause 12–23 cross-check + constraint-level extensibility)**
+**Last touched: 2026-08-08 (hitchhiker's guide ecosystem section)**
 
 ## Docs
-- [x] Hitchhiker's Guide to ETSI C-V2X (`docs/hitchhikers-guide.md`)
+- [x] Hitchhiker's Guide to ETSI C-V2X (`docs/hitchhikers-guide.md`) — added §6 subsection on the AD-stack/cooperative-perception ecosystem (Autoware/Apollo/AutowareV2X, OpenCOOD/V2X-ViT/CoBEVT + datasets), grouped by layer relative to this repo's message-layer work
 - [x] PER Runtime design draft v0.1 (`docs/design/per-runtime-design.md`)
 - [x] PC5 vs Uu interface comparison (`docs/architecture/pc5-vs-uu.md`)
 - [x] Facilities-layer message reference + CAM/DENM flow diagrams (`docs/messages/`)
