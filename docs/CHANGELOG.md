@@ -2,6 +2,13 @@
 
 Dated, terse entries — enough to answer "what changed since I last looked," not a full commit log.
 
+## 2026-08-08 (TTCN-3 conformance suite links — remaining messages)
+- Extended the "ETSI Abstract Test Suites" table in `docs/hitchhikers-guide.md` §8 to cover the rest of the facilities-layer message set, not just CAM/DENM: added VAM (TS 104 018-3), relabeled the existing "ITS Station Facilities" row to name MAPEM/SPATEM/IVIM/SREM-SSEM/RTCMEM explicitly (it was already TS 103 191-1,2,3, just not attributed by message), and noted that CPM and MCM have no published ATS yet (both newer/still-maturing messages).
+- Every link added was checked to actually resolve first, including a negative result: a guessed VAM forge repo path (`ats_vam_ts104018-3`) redirects to GitLab's sign-in page — the signature for "doesn't exist" — so it was reported as unconfirmed rather than presented as a real link. Same for VAM's TTCN-3 archive: the PDF resolves but no `p0.zip`/`p1.zip`/`p2.zip` exists at the expected path, so this is flagged as needing a manual check rather than guessed further.
+
+## 2026-08-08 (TTCN-3 conformance suite links)
+- Added direct links to the CAM (TS 102 868-3) and DENM (TS 102 869-3) TTCN-3 Abstract Test Suite source to `docs/hitchhikers-guide.md` §8, under the existing "ETSI Abstract Test Suites" table: both the live ETSI forge GitLab mirror (`forge.etsi.org/rep/ITS/ttcn/...`, preferred — always current, same host as the ASN.1 repo already referenced in §7) and the version-pinned `p0.zip` source archive ETSI ships alongside each PDF (CAM v1.5.1, DENM v1.6.1). Verified both zip URLs resolve (`200 OK`, correct zip content-type) before adding them.
+
 ## 2026-08-08 (V2V communication overview image)
 - Added `docs/images/v2v-communication-overview.png`
 

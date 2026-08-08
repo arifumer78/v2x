@@ -13,7 +13,7 @@ Design: see [`../docs/design/per-runtime-design.md`](../docs/design/per-runtime-
 ## Building and testing
 
 ```
-cmake -B build -G "Visual Studio 17 2022" -A x64
+cmake -B build -G "Visual Studio 18 2026" -A x64
 cmake --build build --config Debug
 ctest --test-dir build -C Debug --output-on-failure
 ```
@@ -27,7 +27,7 @@ ASan needs a Release-family config (`/RTC`, MSVC's default Debug runtime
 checks, is incompatible with `/fsanitize=address`):
 
 ```
-cmake -B build-asan -G "Visual Studio 17 2022" -A x64 -DV2X_ENABLE_ASAN=ON
+cmake -B build-asan -G "Visual Studio 18 2026" -A x64 -DV2X_ENABLE_ASAN=ON
 cmake --build build-asan --config RelWithDebInfo
 ```
 
@@ -37,7 +37,7 @@ with exit code `0xc0000135` (`STATUS_DLL_NOT_FOUND`), not an ASan finding.
 Add its directory before running `ctest`:
 
 ```
-$env:PATH = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\<version>\bin\Hostx64\x64;" + $env:PATH
+$env:PATH = "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\MSVC\<version>\bin\Hostx64\x64;" + $env:PATH
 ctest --test-dir build-asan -C RelWithDebInfo --output-on-failure
 ```
 

@@ -270,7 +270,19 @@ Field Deployment
 | BTP | EN 302 636-5-1 | TS 102 870-1,2,3 |
 | GeoNetworking | EN 302 636-4-1 | TS 102 871-1,2,3 |
 | ITS Security | TS 103 097 | TS 103 096-1,2,3 |
-| ITS Station Facilities | Various | TS 103 191-1,2,3 |
+| MAPEM/SPATEM/IVIM/SREM-SSEM/RTCMEM (ITS Station Facilities) | TS 103 301 | TS 103 191-1,2,3 |
+| VAM | TS 103 300-3 | TS 104 018-3 |
+
+CPM (TS 103 324) and MCM (TS 103 561, itself still draft/ongoing — see §2) have **no published ATS yet** — both are newer, still-maturing messages; conformance testing for them hasn't caught up.
+
+**TTCN-3 source** — Part 3 of each ATS document *is* the TTCN-3 test specification; the actual TTCN-3 source ships as a `p0.zip` archive alongside the PDF, and for CAM/DENM ETSI also mirrors it live on their GitLab forge (same host as the ASN.1 repo in §7 — generally preferable there, since it's the current version rather than pinned to whatever PDF revision is cited). Every link below was checked to actually resolve before being added — no guessed URLs:
+
+| ATS | TTCN-3 source (live forge repo) | TTCN-3 archive (version-pinned) |
+|---|---|---|
+| CAM — TS 102 868-3 | [forge.etsi.org/…/ats_cam_ts102868-3](https://forge.etsi.org/rep/ITS/ttcn/ats_cam_ts102868-3) | [ts_10286803v010501p0.zip](https://www.etsi.org/deliver/etsi_ts/102800_102899/10286803/01.05.01_60/ts_10286803v010501p0.zip) (v1.5.1) |
+| DENM — TS 102 869-3 | [forge.etsi.org/…/ats_denm_ts102869-3](https://forge.etsi.org/rep/ITS/ttcn/ats_denm_ts102869-3) | [ts_10286903v010601p0.zip](https://www.etsi.org/deliver/etsi_ts/102800_102899/10286903/01.06.01_60/ts_10286903v010601p0.zip) (v1.6.1) |
+| MAPEM/SPATEM/IVIM/SREM-SSEM/RTCMEM — TS 103 191-3 | [forge.etsi.org/rep/ITS/ITS](https://forge.etsi.org/rep/ITS/ITS) (general monorepo — TTCN-3 sources live under `ttcn/AtsIVIM/`, `ttcn/AtsMAPEM/`, etc., not a per-message repo like CAM/DENM) | [ts_10319103v010301p0.zip](https://www.etsi.org/deliver/etsi_ts/103100_103199/10319103/01.03.01_60/ts_10319103v010301p0.zip) (v1.3.1) |
+| VAM — TS 104 018-3 | not found — no dedicated forge repo confirmed (a guessed `ats_vam_ts104018-3` path redirects to GitLab's sign-in page, the signature for "doesn't exist," not a real repo) | not found — [the PDF](https://www.etsi.org/deliver/etsi_ts/104000_104099/10401803/02.01.01_60/ts_10401803v020101p.pdf) (V2.1.1, 2025-07) resolves, but no `p0.zip`/`p1.zip`/`p2.zip` archive exists at the expected path; may be packaged differently — worth checking the PDF itself for the actual attachment reference |
 
 ### Tool Ecosystem by Responsibility
 
