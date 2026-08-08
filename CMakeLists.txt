@@ -8,3 +8,4 @@ if (V2X_BUILD_TESTS)
 endif()
 
 add_subdirectory(runtime)
+add_subdirectory(compiler)

@@ -2,7 +2,7 @@
 
 Honest snapshot of what's actually built vs. planned. Update this at the end of any work session — even a one-line touch is worth it.
 
-**Last touched: 2026-08-08 (hitchhiker's guide ecosystem section)**
+**Last touched: 2026-08-08 (ETSI ITS ASN.1 grammar — real-file-validated)**
 
 ## Docs
 - [x] Hitchhiker's Guide to ETSI C-V2X (`docs/hitchhikers-guide.md`) — added §6 subsection on the AD-stack/cooperative-perception ecosystem (Autoware/Apollo/AutowareV2X, OpenCOOD/V2X-ViT/CoBEVT + datasets), grouped by layer relative to this repo's message-layer work
@@ -82,7 +82,9 @@ Read every construct-encoding clause the orchestration layer touches (§12 BOOLE
 163 tests total (up from 154), all passing under both the Debug build and `V2X_ENABLE_ASAN`.
 
 ## Phase 2 — Compiler (`compiler/`)
-- [ ] ANTLR-based `.asn` parser / IR / codegen front-end — not started. The orchestration layer above is effectively "Phase 2 minus the parser": it's what a future compiler would generate calls into, built and tested ahead of the parser itself, per explicit user direction (X.691's encoding rules are generic and testable without needing to parse any real ETSI schema first).
+- [x] ANTLR4 grammar (`compiler/grammar/AsnEtsiItsLexer.g4`/`AsnEtsiItsParser.g4`) that parses real ETSI CAM (TS 103 900) and CDD (TS 102 894-2) `.asn` modules with zero lexer/parser errors — see `compiler/tests/`. Forked from `antlr/grammars-v4`'s `asn_3gpp` grammar, which could not parse either real file at all; fixed 12 distinct grammar bugs to get there (empty `assignedIdentifier` stub, missing OID `NumberForm`, missing value-constraint on `WITH COMPONENTS` fields, a comma/ellipsis token-fusion bug hitting 5 rules, disabled nested-constraint grouping, a spurious extra-paren bug in `sequenceOfType`, missing `WITH COMPONENT` singular form, missing explicit `[N]` tag support, a WITH-SYNTAX literal-word restriction, and missing inline Information Object literal support — full list in the grammar file's header comment). Also found and worked around a real ANTLR4 C++ runtime bug (missing `#include <chrono>` in `ProfilingATNSimulator.cpp`, breaks under newer/stricter STL — patched via `compiler/cmake/patch_antlr4_chrono.cmake` at FetchContent time, not yet reported upstream) and a genuine encoding mistake in ETSI's own CDD file (~34 stray Windows-1252 bytes in an otherwise-UTF-8 file, crashes rather than errors the C++ runtime's UTF-8 decoder if not pre-transcoded).
+- [ ] **Important, unverified caveat:** the above only proves the grammar consumes real ETSI syntax without errors. It does not prove the resulting parse tree is a sound basis for IR generation — a Visitor-based extraction test (pulling real type/field/constraint data out of the tree) is the next real validation step, not yet done.
+- [ ] IR design, type resolution/import handling, codegen targeting `runtime/` — not started. The orchestration layer in `runtime/` is effectively "Phase 2 minus the parser": it's what this compiler's codegen would generate calls into, built and tested ahead of the parser, per earlier explicit direction — the grammar/parser work above proceeded in parallel with that plan once picked up, not gated on `runtime/` being fuzz-stable first.
 
 ## Phase 3 — Tools (`tools/`)
 - [ ] Not started.
