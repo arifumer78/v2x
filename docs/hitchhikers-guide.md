@@ -55,6 +55,10 @@ ETSI models everything on the **ITS Station Reference Architecture** (EN 302 665
 
 Every one of these is defined twice: once in prose (the service spec) and once formally (the **ASN.1 schema**, see §7) — the ASN.1 is what actually goes over the air, UPER-encoded.
 
+![V2V — Vehicle to Vehicle Communication (ETSI): CAM, DENM, IVIM, SPATEM/MAPEM, and VRU awareness message exchange between vehicles, infrastructure, and pedestrians](images/v2v-communication-overview.png)
+
+*Illustrative overview of the facilities-layer messages in flight during a typical intersection scene — CAM between vehicles, DENM for hazard events, SPATEM/MAPEM from the RSU, IVIM shared vehicle-to-vehicle, and VRU awareness from a pedestrian's device. Simplified for intuition, not a substitute for the specs in the table above.*
+
 **Security plane** — TS 103 097 defines certificate formats and message signing/encryption (built on IEEE 1609.2 concepts, Europeanised). This underpins the EU's Certificate Policy / Trust List for a single European C-ITS trust domain — every message on the wire is signed, and misbehaviour reporting (TS 103 759/103 918) exists to kick out bad actors.
 
 **Management plane** — decentralised congestion control (DCC, TS 103 574), station configuration, and cross-layer coordination.

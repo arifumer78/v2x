@@ -2,6 +2,9 @@
 
 Dated, terse entries — enough to answer "what changed since I last looked," not a full commit log.
 
+## 2026-08-08 (V2V communication overview image)
+- Added `docs/images/v2v-communication-overview.png`
+
 ## 2026-08-08 (hitchhiker's guide ecosystem section)
 - Added a "Related ecosystem — AD stacks & cooperative perception" subsection to `docs/hitchhikers-guide.md` §6, grouped by layer: AD stack integration (Autoware, Baidu Apollo, AutowareV2X, AutoC2X/OpenC2X), cooperative perception/fusion (OpenCOOD, V2X-ViT, CoBEVT, plus the DAIR-V2X/V2X-Real/V2X-Sim/OPV2V datasets they train against), and this repo's own comms/message layer for contrast. Framing: fusion pipelines still have to serialise/deserialise standardised messages at their edges, so message-layer work stays distinct, underserved connective tissue rather than something the field has moved past.
 - Bumped the guide's "Last reviewed" date accordingly.
