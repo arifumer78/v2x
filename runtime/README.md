@@ -20,11 +20,9 @@ ctest --test-dir build -C Debug --output-on-failure
 
 ## Running under AddressSanitizer
 
-MSVC supports ASan (`/fsanitize=address`) but not UBSan — UBSan is
-clang/GCC-only and would need the "C++ Clang tools for Windows" (`clang-cl`)
-component, not currently installed. A separate build directory is used since
-ASan needs a Release-family config (`/RTC`, MSVC's default Debug runtime
-checks, is incompatible with `/fsanitize=address`):
+MSVC supports ASan (`/fsanitize=address`) directly. A separate build
+directory is used since ASan needs a Release-family config (`/RTC`, MSVC's
+default Debug runtime checks, is incompatible with `/fsanitize=address`):
 
 ```
 cmake -B build-asan -G "Visual Studio 18 2026" -A x64 -DV2X_ENABLE_ASAN=ON
@@ -43,9 +41,33 @@ ctest --test-dir build-asan -C RelWithDebInfo --output-on-failure
 
 (Substitute the actual MSVC toolset version under `VC\Tools\MSVC\`.)
 
+## Running under UndefinedBehaviorSanitizer
+
+Plain MSVC (`cl.exe`) doesn't support UBSan — it's clang/GCC-only, needing
+the "C++ Clang Compiler for Windows" VS component (installs `clang-cl.exe`,
+distinct from `clang-tidy`/`clang-format`, which are a separate, smaller
+component and don't include this). With that installed, build using the
+`ClangCL` platform toolset instead of plain MSVC:
+
+```
+cmake -B build-ubsan -G "Visual Studio 18 2026" -A x64 -T ClangCL -DCMAKE_BUILD_TYPE=RelWithDebInfo -DV2X_ENABLE_UBSAN=ON
+cmake --build build-ubsan --config RelWithDebInfo
+ctest --test-dir build-ubsan -C RelWithDebInfo --output-on-failure
+```
+
+No `PATH`/DLL setup needed here (unlike ASan above) — `clang-cl` statically
+links its UBSan runtime by default. That static runtime lib is only built
+for the static CRT, though, which is why `V2X_ENABLE_UBSAN` forces
+`CMAKE_MSVC_RUNTIME_LIBRARY` to static for the whole build (GTest included)
+rather than leaving CMake's usual dynamic-CRT default — see the comments in
+`CMakeLists.txt` if this ever needs revisiting. `-DCMAKE_BUILD_TYPE` must be
+set explicitly at configure time here (the `ClangCL` toolset doesn't apply
+CMake's usual "falls back to Release with a warning" default the way plain
+MSVC does).
+
 ## Test coverage status
 
 GTest Layer 1 (known-answer, boundary, fragmentation, zero-length) is done —
-151 tests, all passing, also verified clean under ASan. Property-based
+163 tests, all passing, verified clean under both ASan and UBSan. Property-based
 round-trip, double round-trip, differential-vs-asn1c, and fuzzing (Layers
 2–5) are not started yet.

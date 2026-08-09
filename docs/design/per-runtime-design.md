@@ -126,7 +126,7 @@ Canonical PER adds determinism constraints on top of basic PER, not new bit-pack
 - SET OF element ordering by encoded-octet comparison (requires the buffer-and-sort orchestration noted in §4.3).
 - Trailing/reserved padding bits forced to zero, never left unspecified.
 
-**Scoping note:** the ETSI ITS CDD/CAM/DENM/CPM/VAM/IS modules are constructed almost entirely from `SEQUENCE` / `SEQUENCE OF`, not `SET` / `SET OF`. If confirmed across all in-scope modules, Basic and Canonical PER produce **byte-identical output** for every ETSI ITS message type in this project's scope, and the SET-ordering/sort machinery is dead code for this project even though it is implemented for completeness. This should be verified by grep against the actual `.asn` modules before Canonical support is prioritized.
+**Scoping note (partially verified 2026-08-08):** grepped the real CAM (TS 103 900) and CDD (TS 102 894-2) `.asn` modules — see `compiler/tests/fixtures/` — for `SET`/`SET OF` type definitions: **zero occurrences in either file.** Every aggregate type in both modules is `SEQUENCE`/`SEQUENCE OF`. For these two modules, Basic and Canonical PER produce **byte-identical output**, and the SET-ordering/sort machinery is confirmed dead code even though it remains implemented for completeness. Not yet checked: DENM, CPM, VAM, MAPEM/SPATEM/IVIM/SREM-SSEM/RTCMEM — repeat this grep once those modules are pulled in (§9).
 
 ### 5.3 Combined Instantiations
 
@@ -196,9 +196,9 @@ Explicitly **out of scope** for this runtime. Rationale:
 
 | Risk | Status |
 |---|---|
-| Self-referential / recursive ASN.1 types | Not believed to occur in ETSI ITS CAM/DENM/CPM/VAM/IS modules, but not yet exhaustively confirmed. Compiler-level IR should detect cycles and reject unless a static depth bound is provided — never silently allocate. Runtime itself does not need to solve this; it's a compiler-level constraint-checking concern, noted here for traceability. |
-| Unbounded SIZE constraints | Any `SEQUENCE OF`/string type without a practical static upper bound breaks the "statically-sized buffer" assumption. Should be a compiler-level hard error ("reject unless provably bounded"), not a runtime surprise. |
-| SET / SET OF usage in ETSI ITS modules | Assumed negligible/absent based on inspection so far; needs a definitive grep-based audit across all in-scope `.asn` modules before Canonical policy work is considered "validated" rather than merely "implemented." |
+| Self-referential / recursive ASN.1 types | **Attempted a text-based check 2026-08-08, found unreliable — not resolved.** A regex heuristic over the real CAM/CDD `.asn` text flagged ~20 apparent "self-references," but spot-checking (`StationId`) showed these are false positives from ASN.1-style doc comments (e.g. `@ref StationId` elsewhere in the file), not actual recursive field embedding — naive text scoping can't reliably separate one type's definition body from surrounding doc comments and later definitions. A real check needs to walk the validated parse tree (`compiler/grammar/`) and build the type-reference graph properly; not yet done. Compiler-level IR should detect cycles and reject unless a static depth bound is provided — never silently allocate. Runtime itself does not need to solve this; it's a compiler-level constraint-checking concern, noted here for traceability. |
+| Unbounded SIZE constraints | **Confirmed absent in CAM/CDD, 2026-08-08.** Every `SIZE(...)` constraint in both real modules has a concrete, literal upper bound (e.g. `SIZE(1..16,...)`) — zero occurrences of the `MAX` keyword in either file. Not yet checked for DENM/CPM/VAM/etc. Should still be a compiler-level hard error ("reject unless provably bounded") for any module where it does occur, not a runtime surprise. |
+| SET / SET OF usage in ETSI ITS modules | **Confirmed absent in CAM/CDD, 2026-08-08** — see §5.2. DENM/CPM/VAM/MAPEM-etc. not yet checked; repeat the grep once those modules are pulled into `compiler/tests/fixtures/`. |
 | 16K fragmentation path | Plausible to trigger in CPM's `PerceivedObjectContainer` on a busy intersection. Must not be skipped in either implementation or test coverage. |
 
 ---
@@ -220,7 +220,7 @@ Explicitly **out of scope** for this runtime. Rationale:
 
 ## 11. Explicit Deferrals (tracked, not forgotten)
 
-- ASN.1 compiler front end (ANTLR grammar, IR, codegen) — separate design document.
+- ASN.1 compiler front end (ANTLR grammar, IR, codegen) — see [`compiler-frontend-design.md`](compiler-frontend-design.md).
 - COER/X.696 codec for 1609.2/TS 103 097 — Phase 4 candidate.
 - Formal MISRA/AUTOSAR tooling and certification claims — only if a concrete need emerges.
 - SET/SET OF canonical sort path validation — implement for completeness, defer rigorous testing until confirmed relevant to in-scope modules.
