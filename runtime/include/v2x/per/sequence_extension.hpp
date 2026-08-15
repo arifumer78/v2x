@@ -31,7 +31,7 @@ Status<> write_sequence_extension(PerWriter<AlignPolicy, CanonicalPolicy>& w, st
     if (!count_status) {
         return count_status;
     }
-    for (bool p : presence) {
+    for (const bool p : presence) {
         auto pb = w.bit(p);
         if (!pb) {
             return pb;
@@ -41,8 +41,8 @@ Status<> write_sequence_extension(PerWriter<AlignPolicy, CanonicalPolicy>& w, st
         if (!presence[i]) {
             continue;
         }
-        auto s = write_open_type_wrapped(w, scratch,
-                                          [&](auto& inner) { return encode_addition(inner, i); });
+        auto s = write_open_type_wrapped(
+            w, scratch, [&](auto& inner) { return std::forward<EncodeAdditionFn>(encode_addition)(inner, i); });
         if (!s) {
             return s;
         }
@@ -98,8 +98,9 @@ Result<uint32_t> read_sequence_extension(PerReader<AlignPolicy, CanonicalPolicy>
             continue;
         }
         if (i < known_count) {
-            auto s = read_open_type_wrapped(r, scratch,
-                                             [&](auto& inner) -> Status<> { return decode_addition(inner, i); });
+            auto s = read_open_type_wrapped(r, scratch, [&](auto& inner) -> Status<> {
+                return std::forward<DecodeAdditionFn>(decode_addition)(inner, i);
+            });
             if (!s) {
                 return Result<uint32_t>::Err(s.error());
             }

@@ -29,7 +29,7 @@ Status<> write_sequence_of(PerWriter<AlignPolicy, CanonicalPolicy>& w, uint32_t 
         }
         const uint32_t chunk = ld.value();
         for (uint32_t i = 0; i < chunk; ++i) {
-            auto es = encode_element(w, index);
+            auto es = std::forward<EncodeElementFn>(encode_element)(w, index);
             if (!es) {
                 return es;
             }
@@ -62,7 +62,7 @@ Result<uint32_t> read_sequence_of(PerReader<AlignPolicy, CanonicalPolicy>& r, st
         }
         const uint32_t chunk = ld.value();
         for (uint32_t i = 0; i < chunk; ++i) {
-            auto es = decode_element(r, index);
+            auto es = std::forward<DecodeElementFn>(decode_element)(r, index);
             if (!es) {
                 return Result<uint32_t>::Err(es.error());
             }

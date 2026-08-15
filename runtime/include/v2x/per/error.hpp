@@ -1,8 +1,11 @@
 #pragma once
 
+#include <cstdint>
+
 namespace v2x::per {
 
-enum class Error {
+// uint8_t base: 6 small values, no reason to default to int (performance-enum-size).
+enum class Error : std::uint8_t {
     BufferExhausted,   // read past end / write past capacity
     ValueOutOfRange,   // v < lb or v > ub
     LengthOutOfRange,  // length outside a given SizeRange constraint

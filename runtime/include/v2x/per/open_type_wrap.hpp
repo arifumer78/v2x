@@ -24,7 +24,7 @@ template <typename AlignPolicy, typename CanonicalPolicy, typename EncodeFn>
 Status<> write_open_type_wrapped(PerWriter<AlignPolicy, CanonicalPolicy>& w, std::span<std::byte> scratch,
                                   EncodeFn&& encode_fn) {
     PerWriter<AlignPolicy, CanonicalPolicy> inner(scratch);
-    auto inner_status = encode_fn(inner);
+    auto inner_status = std::forward<EncodeFn>(encode_fn)(inner);
     if (!inner_status) {
         return inner_status;
     }
@@ -45,7 +45,7 @@ auto read_open_type_wrapped(PerReader<AlignPolicy, CanonicalPolicy>& r, std::spa
         return ReturnType::Err(unwrapped.error());
     }
     PerReader<AlignPolicy, CanonicalPolicy> inner(scratch.subspan(0, unwrapped.value()));
-    return decode_fn(inner);
+    return std::forward<DecodeFn>(decode_fn)(inner);
 }
 
 } // namespace v2x::per
