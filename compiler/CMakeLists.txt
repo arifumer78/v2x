@@ -45,4 +45,39 @@ if (V2X_BUILD_TESTS)
         COMMAND v2x_asn_parser_smoke_test
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests
     )
+
+    add_executable(v2x_asn_ast_extraction_test
+        tests/ast_extraction_test.cpp
+        src/ast_builder.cpp
+        src/generated/AsnEtsiItsLexer.cpp
+        src/generated/AsnEtsiItsParser.cpp
+        src/generated/AsnEtsiItsParserBaseListener.cpp
+        src/generated/AsnEtsiItsParserBaseVisitor.cpp
+        src/generated/AsnEtsiItsParserListener.cpp
+        src/generated/AsnEtsiItsParserVisitor.cpp
+    )
+    target_include_directories(v2x_asn_ast_extraction_test PRIVATE
+        ${antlr4_cpp_runtime_SOURCE_DIR}/runtime/src
+        src
+        src/generated
+        grammar
+        include
+    )
+    target_link_libraries(v2x_asn_ast_extraction_test PRIVATE antlr4_static)
+    target_compile_definitions(v2x_asn_ast_extraction_test PRIVATE ANTLR4CPP_STATIC)
+    set_target_properties(v2x_asn_ast_extraction_test PROPERTIES
+        CXX_STANDARD 17
+        CXX_STANDARD_REQUIRED ON
+    )
+    if (MSVC)
+        set_target_properties(v2x_asn_ast_extraction_test PROPERTIES
+            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+        )
+    endif()
+
+    add_test(
+        NAME AsnAstExtractionTest
+        COMMAND v2x_asn_ast_extraction_test
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    )
 endif()

@@ -54,13 +54,14 @@ Renamed on fork (`AsnEtsiItsLexer`/`AsnEtsiItsParser`) since, after that many su
 
 ---
 
-## 4. Current State (updated 2026-08-09)
+## 4. Current State (updated 2026-08-15)
 
-`compiler/grammar/` parses the **full core ETSI ITS message set** — CAM, CDD, DENM, CPM, VAM, and MAPEM/SPATEM/IVIM/SREM/SSEM/RTCMEM (19 real files total, see `compiler/tests/fixtures/`) — with **zero lexer/parser errors**, verified via `AsnParserSmokeTest` (CTest, wired into the root build, recursively walks `fixtures/`). Notably: all 12 fixes made against CAM+CDD alone (§3.1) generalized to the other 17 files with **zero additional grammar changes needed** — the common X.680/X.681 machinery those fixes covered (constraint syntax, extensibility, tagging, OID forms, the Information Object idiom) turned out to be genuinely complete for this message set, not just for CAM/CDD specifically. This is the full extent of what's validated so far: **syntax only.**
+`compiler/grammar/` parses the **full core ETSI ITS message set** — CAM, CDD, DENM, CPM, VAM, and MAPEM/SPATEM/IVIM/SREM/SSEM/RTCMEM (19 real files total, see `compiler/tests/fixtures/`) — with **zero lexer/parser errors**, verified via `AsnParserSmokeTest` (CTest, wired into the root build, recursively walks `fixtures/`). Notably: all 12 fixes made against CAM+CDD alone (§3.1) generalized to the other 17 files with **zero additional grammar changes needed** — the common X.680/X.681 machinery those fixes covered (constraint syntax, extensibility, tagging, OID forms, the Information Object idiom) turned out to be genuinely complete for this message set, not just for CAM/CDD specifically.
+
+**Since then, §6's Visitor-based extraction proof is also done**: the parse tree's shape is now confirmed to be a workable basis for structured extraction, not just syntax — see §6 for the AST that was built and what it does/doesn't prove.
 
 **Explicitly not yet done, and not to be conflated with the above:**
-- No IR exists. No semantic analysis (cross-module import resolution, AUTOMATIC TAGS computation, constraint-to-`SizeRange` translation) exists.
-- No proof the parse tree's *shape* is a workable basis for IR extraction — see §6.
+- No semantic IR exists. No semantic analysis (cross-module import resolution, AUTOMATIC TAGS computation, constraint-to-`SizeRange` translation) exists.
 - No codegen exists; nothing from this front end has yet produced a single line of code calling into `runtime/`.
 
 ---
@@ -75,16 +76,23 @@ With this, message-set breadth is no longer the open risk for this front end —
 
 ---
 
-## 6. Tree Walking and IR Construction (design decided, not yet implemented)
+## 6. Tree Walking and AST Construction (done, 2026-08-15 — not the semantic IR)
 
 ANTLR4 builds a **concrete** syntax tree (every grammar rule is a node, including punctuation and — as seen while patching this grammar — real depth: a single constraint value nests seven rules deep, `elements → subtypeElements → value → builtinValue → integerValue → signedNumber → NUMBER`). Two built-in traversal mechanisms:
 
 - **Listener** (always generated): ANTLR walks the tree, calling `void enterX`/`exitX` callbacks. Building an IR this way means threading mutable state between enter/exit calls to pass data up — awkward for anything beyond linear accumulation.
 - **Visitor** (generated via `-visitor`, already present in `compiler/src/generated/`): traversal is driven explicitly, and each `visitX` method **returns a value** — `visitAsnType` can return an `IR::Type`, `visitComponentType` an `IR::Field` built from its visited children. Maps directly onto bottom-up IR construction.
 
-**Decision: Visitor.** No extra setup cost (already codegen'd with `-visitor`). The real work ahead is not the traversal mechanism but the *flattening* — collapsing deep, syntactically-faithful rule chains like the one above into clean IR nodes, discarding the grammar's own structural noise.
+**Decision: Visitor.** No extra setup cost (already codegen'd with `-visitor`). `AstBuilder` (`compiler/src/ast_builder.h`/`.cpp`) subclasses the generated `AsnEtsiItsParserBaseVisitor`, but in practice most of its methods are called directly by concrete `XyzContext*` type rather than routed through the generic `accept()`/`std::any` dispatch — the grammar already statically determines the next rule at almost every call site (e.g. a `ComponentTypeContext*` always yields a `Field`), so the indirection buys nothing there. `accept()`/`std::any` would only earn its keep at the genuinely polymorphic points (`builtinType`'s alternatives, `assignment`'s four alternatives), and even those are handled with plain `if`-chains over which child accessor is non-null, which is both simpler and something the grammar already guarantees is mutually exclusive.
 
-**Next concrete validation step, not yet done:** a small Visitor-based extraction proof — pull one real, non-trivial type (e.g. `CamParameters`: optional fields, nested containers, cross-module imports) out of the CAM parse tree into a plain struct by hand, before committing to a full IR shape. This is what actually tests whether §4's "zero parser errors" result is a sound foundation, or just a syntax-level result that says nothing about semantic extractability.
+**The validation step this section previously called out as not-yet-done is done**: a Visitor-based extraction proof against the real CAM parse tree, using `CamParameters` (optional fields, extensibility, cross-module-referenced containers) as the named test case, exactly as planned. Result: the CST *is* a sound basis for structured extraction — `compiler/tests/ast_extraction_test.cpp` walks all 19 real fixtures through `AstBuilder` with zero crashes, and asserts the full expected shape of `CamParameters` (5 fields, correct optional/extension-addition flags, correct referenced-type names) and `HighFrequencyContainer` (a CHOICE, 2 root alternatives) out of the real CAM file. Wired into CTest as `AsnAstExtractionTest`.
+
+**The AST produced (`compiler/include/v2x/asn/ast.hpp`) is deliberately encoding-rule-agnostic**, checked explicitly against COER and BER, not designed against PER alone — `runtime/` today only targets UPER and COER/BER/1609.2 are formally deferred (§8 below, STATUS.md Phase 4), but this AST is meant to be the one front end any future codegen sits on top of. Two decisions follow from that check:
+
+- **Constraints are captured as structured min/max bounds, not raw text** (`Constraint{kind, rootRanges, extensionRanges, extensible, rawText}` — a `Bound` is a literal, `MIN`/`MAX`, or a named/defined-value reference). This is exactly the deepest CST chain called out above, walked structurally rather than punted to `getText()` — punting would have sidestepped the one thing this validation step needed to prove. Grounded in what the 19 real fixtures actually contain (grepped, not guessed): 123 `SIZE(...)` occurrences (plain and extensible, occasionally two ranges e.g. `SIZE(1..16,...,17..40)`), plain INTEGER value ranges, and ~30 `WITH COMPONENTS {...}` presence constraints (a validation-level concern, not wire-shape). The extraction walks `constraint → constraintSpec → subtypeConstraint → elementSetSpecs → ... → subtypeElements` and recognizes plain range/size shapes; anything else (real unions/intersections of more than one term, `ALL EXCEPT`, `WITH COMPONENT(S)`, `PATTERN`, `generalConstraint`) degrades to `Raw` (rawText only) rather than guessing. This structured form is meaningful to both PER's bit-packing and COER's octet-packing of constrained values — same input data, different downstream packing per encoding rule, which is exactly the right layering.
+- **Tags are captured as structured class/number/mode** (`Tag{tagClass, number, mode}`), not raw text, and `Module` captures its `tagDefault`/`extensionDefault`. PER mostly ignores tags, so this was easy to under-scope; BER/DER is fundamentally tag-driven TLV, so an AST that only serves PER well would have been a real gap here. Actually *computing* AUTOMATIC TAGS (assigning positional tags when unspecified) is unaffected by this — still explicit future work below — this only stops the raw facts from being silently discarded.
+
+**Still explicitly not done, unaffected by the above:** cross-module import resolution (imports are captured as symbol/module-name pairs, not resolved), AUTOMATIC TAGS computation, constraint-to-`SizeRange` translation for codegen, and the X.681 Information Object System / parameterized types (`CLASS`/`objectClassAssignment` and `parameterizedAssignment` are recorded as an opaque `UnsupportedAssignment{name, reason}` rather than modeled or crashed on — real, already-known gaps per §8, not newly introduced here).
 
 ---
 
